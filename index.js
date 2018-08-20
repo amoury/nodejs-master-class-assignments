@@ -40,7 +40,10 @@ const serverOps = (req, res) => {
         res.writeHead(statusCode);
         res.end(payloadString);
       })
-      .catch (err => console.log(err));
+      .catch (err => { 
+        console.log(err)
+        res.end(err);
+      });
 
   };
 
