@@ -4,6 +4,7 @@ const StringDecoder = require('string_decoder').StringDecoder;
 
 const handlers = require('./lib/handlers');
 const _data = require('./lib/data');
+const helpers = require('./lib/helpers');
 
 
 const httpServer = http.createServer((req, res) => serverOps(req, res));
@@ -27,17 +28,20 @@ const serverOps = (req, res) => {
   let payload = async () => {
     const result = await getPayload(req, res);
     const chosenHandler = typeof router[path] !== "undefined" ? router[path] : handlers.notFound;
-    const data = { path, queryString, method, headers, payload: result };
+    const data = { path, queryString, method, headers, payload: helpers.parseJsonToObject(result) };
 
-    chosenHandler(data, (statusCode, payload) => {
-      statusCode = typeof statusCode == "number" ? statusCode : 200;
-      payload = typeof payload == "object" ? payload: {};
-      const payloadString = JSON.stringify(payload); 
+    chosenHandler(data)
+      .then((statusCode, payload) => {
+        statusCode = typeof statusCode == "number" ? statusCode : 200;
+        payload = typeof payload == "object" ? payload : {};
+        const payloadString = JSON.stringify(payload);
 
-      res.setHeader("Content-Type", "application/json");
-      res.writeHead(statusCode);
-      res.end(payloadString);
-    })  
+        res.setHeader("Content-Type", "application/json");
+        res.writeHead(statusCode);
+        res.end(payloadString);
+      })
+      .catch (err => console.log(err));
+
   };
 
   payload(req, res);
