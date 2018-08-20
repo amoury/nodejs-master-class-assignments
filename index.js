@@ -26,24 +26,26 @@ const serverOps = (req, res) => {
 
   // 4. Get the payload
   let payload = async () => {
-    const result = await getPayload(req, res);
-    const chosenHandler = typeof router[path] !== "undefined" ? router[path] : handlers.notFound;
-    const data = { path, queryString, method, headers, payload: helpers.parseJsonToObject(result) };
-
-    chosenHandler(data)
-      .then((statusCode, payload) => {
-        statusCode = typeof statusCode == "number" ? statusCode : 200;
-        payload = typeof payload == "object" ? payload : {};
-        const payloadString = JSON.stringify(payload);
-
-        res.setHeader("Content-Type", "application/json");
-        res.writeHead(statusCode);
-        res.end(payloadString);
-      })
-      .catch (err => { 
-        console.log(err)
-        res.end(err);
-      });
+    try {
+      const result = await getPayload(req, res);
+      const chosenHandler = typeof router[path] !== "undefined" ? router[path] : handlers.notFound;
+      const data = { path, queryString, method, headers, payload: helpers.parseJsonToObject(result) };
+  
+      await chosenHandler(data)
+        .then((payload, statusCode) => {
+          statusCode = typeof statusCode == "number" ? statusCode : 200;
+          payload = typeof payload == "object" ? payload : {};
+          const payloadString = JSON.stringify(payload);
+  
+          res.setHeader("Content-Type", "application/json");
+          res.writeHead(statusCode);
+          res.end(payloadString);
+        })
+    }
+    catch(err) {
+      res.writeHead(404);
+      res.end(err.message);
+    }
 
   };
 
@@ -60,9 +62,12 @@ const serverOps = (req, res) => {
 const getPayload = (req, res) => {
   return new Promise(( resolve, reject ) => {
     const decoder = new StringDecoder('utf-8');
-      let buffer = "";
-      
-      req.on('data', data => buffer += decoder.write(data));
+    let buffer = "";
+    
+
+      req.on('data', data => {
+        buffer += decoder.write(data)
+      });
       req.on('end', () => { 
         buffer += decoder.end()
         resolve(buffer);
